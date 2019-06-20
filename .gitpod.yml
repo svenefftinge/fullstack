@@ -1,0 +1,43 @@
+# let's start four terminals in two tab groups
+tasks:
+  - name: db
+    init: >
+      mkdir -p /workspace/mongodb &&
+      mkdir -p /workspace/data &&
+      wget -qO- https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu1604-3.6.13.tgz | tar xzaf - -C /workspace/mongodb --strip-components=1
+    command: >
+      /workspace/mongodb/bin/mongod --dbpath /workspace/data
+  - name: server
+    before: >
+      cd ./server
+    init: >
+      yarn install --mutex network
+    command: >
+      yarn watch
+
+  - name: client gen:types:watch
+    openMode: split-right #open a new tab group
+    before: >
+      cd ./client
+    command: >
+      yarn gen:types:watch
+  - name: client
+    before: >
+      cd ./client
+    init: >
+      cp ./src/config/example.env.json ./src/config/development.env.json &&
+      yarn install --mutex network
+    command: >
+      sed -i 's@http://127.0.0.1:4000@'"$(gp url 4000)"'@g' ./src/config/development.env.json &&
+      gp open ./src/config/development.env.json &&
+      yarn start
+
+ports:
+  - port: 31997 # yarn mutex
+    onOpen: ignore
+  - port: 27017 # mongo
+    onOpen: ignore
+  - port: 4000 # server
+    onOpen: ignore
+  - port: 3000 # server
+    onOpen: open-preview
